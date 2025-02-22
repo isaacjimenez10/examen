@@ -7,6 +7,8 @@ function PetsList() {
   const [filteredPets, setFilteredPets] = useState([]);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [editingPet, setEditingPet] = useState(null); // Estado para la mascota en edición
+  const [isModalOpen, setIsModalOpen] = useState(false); // Estado para controlar el modal
 
   useEffect(() => {
     // Cambia la URL si tu FastAPI corre en otro puerto
@@ -56,10 +58,44 @@ function PetsList() {
     alert(`Details:\nName: ${pet.nombre}\nBreed: ${pet.raza}\nAge: ${pet.edad}`);
   };
 
-  // Función para editar una mascota (redirigir a un formulario de edición)
-  const handleEdit = (id) => {
-    // Aquí puedes redirigir a una página de edición o abrir un modal
-    alert(`Edit pet with ID: ${id}`);
+  // Función para abrir el modal de edición
+  const openEditModal = (pet) => {
+    setEditingPet(pet); // Establece la mascota que se está editando
+    setIsModalOpen(true); // Abre el modal
+  };
+
+  // Función para cerrar el modal
+  const closeEditModal = () => {
+    setIsModalOpen(false);
+    setEditingPet(null); // Limpia la mascota en edición
+  };
+
+  // Función para manejar el envío del formulario de edición
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      // Envía la solicitud PUT a la API para actualizar la mascota
+      await axios.put(`http://127.0.0.1:8000/pets/${editingPet.id}`, editingPet);
+      
+      // Actualiza la lista de mascotas
+      const updatedPets = pets.map((pet) =>
+        pet.id === editingPet.id ? editingPet : pet
+      );
+      setPets(updatedPets);
+      setFilteredPets(updatedPets);
+
+      alert("Pet updated successfully");
+      closeEditModal(); // Cierra el modal después de la edición
+    } catch (err) {
+      setError("Error updating pet");
+      console.error(err);
+    }
+  };
+
+  // Función para actualizar los campos de la mascota en edición
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditingPet({ ...editingPet, [name]: value });
   };
 
   return (
@@ -90,7 +126,7 @@ function PetsList() {
                 <button onClick={() => handleView(pet.id)} className="view-button">
                   View
                 </button>
-                <button onClick={() => handleEdit(pet.id)} className="edit-button">
+                <button onClick={() => openEditModal(pet)} className="edit-button">
                   Edit
                 </button>
                 <button onClick={() => handleDelete(pet.id)} className="delete-button">
@@ -102,6 +138,55 @@ function PetsList() {
         </ul>
       ) : (
         <p>No pets available</p>
+      )}
+
+      {/* Modal de edición */}
+      {isModalOpen && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h2>Edit Pet</h2>
+            <form onSubmit={handleEditSubmit}>
+              <div className="form-group">
+                <label>Name:</label>
+                <input
+                  type="text"
+                  name="nombre"
+                  value={editingPet.nombre}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Breed:</label>
+                <input
+                  type="text"
+                  name="raza"
+                  value={editingPet.raza}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>Age:</label>
+                <input
+                  type="number"
+                  name="edad"
+                  value={editingPet.edad}
+                  onChange={handleInputChange}
+                  required
+                />
+              </div>
+              <div className="modal-actions">
+                <button type="button" onClick={closeEditModal} className="cancel-button">
+                  Cancel
+                </button>
+                <button type="submit" className="save-button">
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
